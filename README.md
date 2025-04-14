@@ -1,10 +1,10 @@
-# 🚀 Deploying Web-Scraping by Cloud DevOps Workflow using VS Code
+#  Deploying Web-Scraping by Cloud DevOps Workflow using VS Code
 
 This project demonstrates a complete DevOps pipeline using Docker, Kubernetes (via Minikube), AWS EKS, IAM, AWS Lambda, and AWS SDK — all developed and managed inside **Visual Studio Code**.
 
 ---
 
-## 🧱 Prerequisites
+##   Prerequisites
 
 - [Visual Studio Code](https://code.visualstudio.com/)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
@@ -18,92 +18,152 @@ This project demonstrates a complete DevOps pipeline using Docker, Kubernetes (v
 
 ---
 
-## 🐳 1. Docker in VS Code
+##  1. Docker in VS Code
 
-### 🔧 Install Extensions
+###  Install Extensions
 
 
 ### 🛆 Build and Run a Docker Container
 
 ```bash
 # Build the Docker image
-docker build -t jupyter-notebook .
+docker build -t python-jupyter-app .
 
 # Run the container
 docker run -p 8080:8080 jupyter-notebook
+```
+
+###  Dockerfile
+```dockerfile
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+
+COPY app.py app.py
+
+EXPOSE 8888
+
+CMD ["python", "app.py"]
+```
+
+### requirements.txt
+```
+flask
+pandas
+jupyter
+numpy
 ```
 
 You can use the Docker extension sidebar in VS Code to view containers, images, logs, etc.
 
 ---
 
-## ☘️ 2. Minikube & Kubernetes in VS Code
+##  2. Minikube & Kubernetes in VS Code
 
-### 🔧 Install Extensions
+###  Install Extensions
 
 - Kubernetes (official) extension
 - YAML (for syntax highlighting)
 
-### 🚀 Start Minikube and Deploy
+###  Start Minikube and Deploy
 
 ```bash
 # Start Minikube
 minikube start
+mimikube status
+
+# Loading Docker image with minikube
+minikube image load python-jupyter-app
 
 # Set kubectl context
 kubectl config use-context minikube
 
 # Apply your deployment
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
+kubectl apply -f python-jupyter-app.deployment.yaml
+kubectl apply -f python-jupyter-app.service.yaml
+
+#To restart kubectl again
+kubectl rollout restart deployment python-jupyter-deployment
+
+#To check pods
+kubectl get pods
+
+#To run the application
+minikube service python-juypter-service --url
+
+#To check errors
+kubectl logs <pod name>
 ```
 
-### 📂 k8s/deployment.yaml
+###  python-jupyter-app.deployment.yaml
 ```yaml
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-app
+  name: python-jupyter-deployment
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: my-app
+      app: python-jupyter-app
   template:
     metadata:
       labels:
-        app: my-app
+        app: python-jupyter-app
     spec:
       containers:
-        - name: my-app
-          image: my-app:latest
-          ports:
-            - containerPort: 3000
+      - name: python-jupyter-app
+        image: python-jupyter-app
+        imagePullPolicy: Never
+
+        ports:
+        - containerPort: 9999
+    
 ```
 
-### 📂 k8s/service.yaml
+###  python-jupyter-app.service.yaml
 ```yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: my-app-service
+  name: python-jupyter-service
 spec:
   type: NodePort
   selector:
-    app: my-app
+    app: python-jupyter-app
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 3000
-      nodePort: 30007
+      targetPort: 9999
+  
+```
+
+### app.py
+
+```
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return "Hello from Flask running in Kubernetes!"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=9999)
 ```
 
 ---
 
-## ☁️ 3. AWS EKS & IAM in VS Code
+##  3. AWS EKS & IAM in VS Code
 
 
-### 🔹 **Step 1: Ensure Your Docker Image is Ready**
+###  **Step 1: Ensure Your Docker Image is Ready**
 
 Make sure your Dockerfile is working and builds correctly.
 
@@ -142,7 +202,7 @@ docker build -t jupyter-notebook:latest .
 
 #### Option A: **Using AWS Console**
 1. Go to **EKS > Clusters > Create Cluster**
-2. Choose name, role, networking settings
+2. Choose name, role, and networking settings
 3. Create a Node Group (EC2 worker nodes)
 
 #### Option B: **Using `eksctl` (faster)**
@@ -250,10 +310,10 @@ aws eks --region us-east-1 update-kubeconfig --name jupyter-cluster
 
 ---
 
-## 🧠 4. AWS Lambda 
+##  4. AWS Lambda 
 
 
-### 📁 Folder Structure Example
+###  Folder Structure Example
 
 ```
 lambda/
@@ -263,7 +323,7 @@ lambda/
 
 ---
 
-### 🐍 Sample Code: `lambda_function.py`
+###  Sample Code: `lambda_function.py`
 
 ```python
 def lambda_handler(event, context):
@@ -275,7 +335,7 @@ def lambda_handler(event, context):
 
 ---
 
-### 🚀 Deploying to AWS Manually (Using AWS CLI)
+###  Deploying to AWS Manually (Using AWS CLI)
 
 #### Step 1: Zip Your Lambda Code
 
@@ -304,11 +364,7 @@ aws lambda update-function-code \
 ```
 
 
-## 🐍 5. Using AWS SDK (`boto3`) in a Python File
-
-### ✅ What is `boto3`?
-
-[`boto3`](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html) is the **official AWS SDK for Python**. It lets you **interact with AWS services directly from your Python scripts**, such as S3, Lambda, DynamoDB, EC2, etc.
+##  5. Using AWS SDK (`boto3`) in a Python File
 
 ---
 
@@ -327,22 +383,38 @@ pip install boto3
 
 ```python
 import boto3
+from botocore.exceptions import ClientError
 
-s3 = boto3.client('s3')
+# Replace with your region
+region = 'us-east-1'  # or 'ap-south-1', 'us-west-2', etc.
+bucket_name = 'tejaswi-bucket-2002'  # Make sure this is unique globally
 
-s3.upload_file(
-    Filename='hello.txt',         # Local file
-    Bucket='your-s3-bucket-name',
-    Key='folder/hello.txt'        # S3 file path
-)
-print("Upload successful!")
+# Initialize session
+session = boto3.session.Session(region_name=region)
+s3 = session.client('s3')
+
+try:
+    if region == 'us-east-1':
+        s3.create_bucket(Bucket=bucket_name)
+    else:
+        s3.create_bucket(
+            Bucket=bucket_name,
+            CreateBucketConfiguration={'LocationConstraint': region}
+        )
+    print(f'✅ Bucket "{bucket_name}" created successfully in {region}')
+except ClientError as e:
+    if e.response['Error']['Code'] == 'BucketAlreadyOwnedByYou':
+        print(f'ℹ️ Bucket "{bucket_name}" already exists and is owned by you.')
+    else:
+        print(f'❌ Failed to create bucket: {e}')
+
 ```
 
 ---
 
-## 🔀 5. GitHub Actions CI/CD Pipeline
+##  5. GitHub Actions CI/CD Pipeline
 
-### 📁 File Structure
+###  File Structure
 
 ```
 .github/
@@ -350,7 +422,7 @@ print("Upload successful!")
     └── aws-deploy.yml
 ```
 
-### 📄 .github/workflows/aws-deploy.yml
+###  .github/workflows/aws-deploy.yml
 
 ```yaml
 name: Deploy to AWS Lambda
@@ -390,10 +462,57 @@ jobs:
 
 ---
 
-## 🔐 AWS Secrets in GitHub
+##  AWS Secrets in GitHub
 
 1. Go to your repo → Settings → Secrets and variables → Actions
 2. Add:
    - `AWS_ACCESS_KEY_ID`
    - `AWS_SECRET_ACCESS_KEY`
 
+
+### Terraform Infrastructure Setup
+
+This project contains Terraform code to provision infrastructure using [Terraform](https://www.terraform.io/).
+
+
+## ⚙️ Usage
+
+1. **Initialize Terraform**
+
+```bash
+terraform init
+```
+
+2. **Format Code (optional)**
+
+```bash
+terraform fmt
+```
+
+3. **Plan Infrastructure Changes**
+
+```bash
+terraform plan
+```
+
+4. **Apply Infrastructure**
+
+```bash
+terraform apply
+```
+
+5. **Destroy Infrastructure**
+
+```bash
+terraform destroy
+```
+
+
+
+##  Clean Up
+
+```bash
+terraform destroy
+```
+
+---
