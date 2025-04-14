@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-jupyter-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-jupyter-app
+  template:
+    metadata:
+      labels:
+        app: python-jupyter-app
+    spec:
+      containers:
+      - name: python-jupyter-app
+        image: python-jupyter-app
+        imagePullPolicy: Never
+
+        ports:
+        - containerPort: 9999
