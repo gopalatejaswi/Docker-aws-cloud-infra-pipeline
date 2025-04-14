@@ -1,0 +1,30 @@
+# .gitignore
+
+# Ignore Python bytecode files
+*.pyc
+
+# Ignore Python cache directories
+__pycache__/
+
+# Ignore environment variable files
+*.env
+
+# Ignore log files
+*.log
+
+# Ignore node_modules directory (if using Node.js)
+node_modules/
+
+# Ignore Docker-related files
+docker-compose.override.yml
+
+# Ignore swap files created by text editors
+*.swp
+
+# Ignore Docker image and container files
+*.tar
+*.gz
+
+# Ignore Kubernetes config files or credentials
+.kube/
+.docker/
